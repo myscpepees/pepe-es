@@ -1,0 +1,301 @@
+#!/bin/bash
+iptables -t nat -A POSTROUTING -s 10.8.0.0/24 -o eth0 -j MASQUERADE
+# initialisasi var
+export DEBIAN_FRONTEND=noninteractive
+OS=`uname -m`;
+MYIP=$(wget -qO- icanhazip.com);
+MYIP2="s/xxxxxxxxx/$MYIP/g";
+ANU=$(ip -o $ANU -4 route show to default | awk '{print $5}');
+domain=$(cat /etc/xray/domain)
+
+# Install OpenVPN dan Easy-RSA
+apt install openvpn easy-rsa unzip -y
+apt install openssl iptables iptables-persistent -y
+mkdir -p /etc/openvpn/server/easy-rsa/
+cd /etc/openvpn/
+wget -q -O vpn.zip "https://raw.githubusercontent.com/ZmFkbHkK/xd/main/openvpn/vpn.zip"
+unzip vpn.zip
+rm -f vpn.zip
+chown -R root:root /etc/openvpn/server/easy-rsa/
+
+cd
+mkdir -p /usr/lib/openvpn/
+cp /usr/lib/x86_64-linux-gnu/openvpn/plugins/openvpn-plugin-auth-pam.so /usr/lib/openvpn/openvpn-plugin-auth-pam.so
+
+# nano /etc/default/openvpn
+sed -i 's/#AUTOSTART="all"/AUTOSTART="all"/g' /etc/default/openvpn
+
+# aktifkan ip4 forwarding
+echo 1 > /proc/sys/net/ipv4/ip_forward
+sed -i 's/#net.ipv4.ip_forward=1/net.ipv4.ip_forward=1/g' /etc/sysctl.conf
+
+# Buat config client TCP 1194
+cat > /etc/openvpn/client-tcp-1194.ovpn <<-END
+setenv FRIENDLY_NAME "OVPN TCP"
+client
+dev tun
+proto tcp
+setenv CLIENT_CERT 0
+remote $domain 1194
+http-proxy xxxxxxxxx 3128
+resolv-retry infinite
+route-method exe
+nobind
+remote-cert-tls server
+cipher AES-256-CBC
+auth SHA256
+persist-key
+persist-tun
+auth-user-pass
+comp-lzo
+verb 3
+END
+
+sed -i $MYIP2 /etc/openvpn/client-tcp-1194.ovpn;
+
+# Buat config client UDP 2200
+cat > /etc/openvpn/client-udp-2200.ovpn <<-END
+setenv FRIENDLY_NAME "OVPN UDP"
+client
+dev tun
+proto udp
+setenv CLIENT_CERT 0
+remote $domain 2200
+resolv-retry infinite
+route-method exe
+nobind
+remote-cert-tls server
+cipher AES-256-CBC
+auth SHA256
+persist-key
+persist-tun
+auth-user-pass
+comp-lzo
+verb 3
+END
+
+sed -i $MYIP2 /etc/openvpn/client-udp-2200.ovpn;
+
+# Buat config client SSL
+cat > /etc/openvpn/client-tcp-ssl.ovpn <<-END
+setenv FRIENDLY_NAME "OVPN SSL"
+client
+dev tun
+proto tcp
+setenv CLIENT_CERT 0
+remote $domain 442
+resolv-retry infinite
+route-method exe
+nobind
+remote-cert-tls server
+cipher AES-256-CBC
+auth SHA256
+persist-key
+persist-tun
+auth-user-pass
+comp-lzo
+verb 3
+END
+
+sed -i $MYIP2 /etc/openvpn/client-tcp-ssl.ovpn;
+
+# Buat config client Websocket
+cat > /etc/openvpn/client-tcp-websocket.ovpn <<-END
+setenv FRIENDLY_NAME "OVPN WEBSOCKET"
+client
+dev tun
+proto tcp
+setenv CLIENT_CERT 0
+remote $domain 2095
+resolv-retry infinite
+route-method exe
+nobind
+remote-cert-tls server
+cipher AES-256-CBC
+auth SHA256
+persist-key
+persist-tun
+auth-user-pass
+comp-lzo
+verb 3
+END
+
+sed -i $MYIP2 /etc/openvpn/client-tcp-websocket.ovpn;
+
+cd
+# pada tulisan xxx ganti dengan alamat ip address VPS anda 
+/etc/init.d/openvpn restart
+
+function cert_ovpn() {
+# masukkan certificatenya ke dalam config client TCP 1194
+echo '<ca>' >> /etc/openvpn/client-tcp-1194.ovpn
+cat /etc/openvpn/server/ca.crt >> /etc/openvpn/client-tcp-1194.ovpn
+echo '</ca>' >> /etc/openvpn/client-tcp-1194.ovpn
+
+# Copy config OpenVPN client ke home directory root agar mudah didownload ( TCP 1194 )
+cp /etc/openvpn/client-tcp-1194.ovpn /var/www/html/client-tcp-1194.ovpn
+
+# masukkan certificatenya ke dalam config client UDP 2200
+echo '<ca>' >> /etc/openvpn/client-udp-2200.ovpn
+cat /etc/openvpn/server/ca.crt >> /etc/openvpn/client-udp-2200.ovpn
+echo '</ca>' >> /etc/openvpn/client-udp-2200.ovpn
+
+# Copy config OpenVPN client ke home directory root agar mudah didownload ( UDP 2200 )
+cp /etc/openvpn/client-udp-2200.ovpn /var/www/html/client-udp-2200.ovpn
+
+# masukkan certificatenya ke dalam config client SSL
+echo '<ca>' >> /etc/openvpn/client-tcp-ssl.ovpn
+cat /etc/openvpn/server/ca.crt >> /etc/openvpn/client-tcp-ssl.ovpn
+echo '</ca>' >> /etc/openvpn/client-tcp-ssl.ovpn
+
+# Copy config OpenVPN client ke home directory root agar mudah didownload ( SSL )
+cp /etc/openvpn/client-tcp-ssl.ovpn /var/www/html/client-tcp-ssl.ovpn
+
+
+# masukkan certificatenya ke dalam config client Websocket
+echo '<ca>' >> /etc/openvpn/client-tcp-websocket.ovpn
+cat /etc/openvpn/server/ca.crt >> /etc/openvpn/client-tcp-websocket.ovpn
+echo '</ca>' >> /etc/openvpn/client-tcp-websocket.ovpn
+
+# Copy config OpenVPN client ke home directory root agar mudah didownload ( Websocket )
+cp /etc/openvpn/client-tcp-websocket.ovpn /var/www/html/client-tcp-websocket.ovpn
+
+ 
+cd /var/www/html/
+zip all-openvpn.zip client-tcp-1194.ovpn client-udp-2200.ovpn client-tcp-ssl.ovpn client-tcp-websocket.ovpn > /dev/null 2>&1
+cd
+cat <<'mySiteOvpn' > /var/www/html/index.html
+<!DOCTYPE html>
+<html lang="en">
+
+<!-- Simple OVPN Download site -->
+
+<head><meta charset="utf-8" /><title>OVPN Config Download</title><meta name="description" content="Server" /><meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" name="viewport" /><meta name="theme-color" content="#000000" /><link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.8.2/css/all.css"><link href="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/4.3.1/css/bootstrap.min.css" rel="stylesheet"><link href="https://cdnjs.cloudflare.com/ajax/libs/mdbootstrap/4.8.3/css/mdb.min.css" rel="stylesheet"></head><body><div class="container justify-content-center" style="margin-top:9em;margin-bottom:5em;"><div class="col-md"><div class="view"><img src="https://openvpn.net/wp-content/uploads/openvpn.jpg" class="card-img-top"><div class="mask rgba-white-slight"></div></div><div class="card"><div class="card-body"><h5 class="card-title">Config List</h5><br /><ul class="list-group">
+
+<li class="list-group-item justify-content-between align-items-center" style="margin-bottom:1em;"><p>TCP <span class="badge light-blue darken-4">Android/iOS/PC/Modem</span><br /><small></small></p><a class="btn btn-outline-success waves-effect btn-sm" href="https://IP-ADDRESSS:5000/client-tcp-1194.ovpn" style="float:right;"><i class="fa fa-download"></i> Download</a></li>
+
+<li class="list-group-item justify-content-between align-items-center" style="margin-bottom:1em;"><p>UDP <span class="badge light-blue darken-4">Android/iOS/PC/Modem</span><br /><small></small></p><a class="btn btn-outline-success waves-effect btn-sm" href="https://IP-ADDRESSS:5000/client-udp-2200.ovpn" style="float:right;"><i class="fa fa-download"></i> Download</a></li>
+
+<li class="list-group-item justify-content-between align-items-center" style="margin-bottom:1em;"><p>SSL <span class="badge light-blue darken-4">Android/iOS/PC/Modem</span><br /><small></small></p><a class="btn btn-outline-success waves-effect btn-sm" href="https://IP-ADDRESSS:5000/client-tcp-ssl.ovpn" style="float:right;"><i class="fa fa-download"></i> Download</a></li>
+
+<li class="list-group-item justify-content-between align-items-center" style="margin-bottom:1em;"><p> Websocket <span class="badge light-blue darken-4">Android/iOS/PC/Modem</span><br /><small></small></p><a class="btn btn-outline-success waves-effect btn-sm" href="https://IP-ADDRESSS:5000/client-tcp-websocket.ovpn" style="float:right;"><i class="fa fa-download"></i> Download</a></li>
+
+<li class="list-group-item justify-content-between align-items-center" style="margin-bottom:1em;"><p> ALL.zip <span class="badge light-blue darken-4">Android/iOS/PC/Modem</span><br /><small></small></p><a class="btn btn-outline-success waves-effect btn-sm" href="https://IP-ADDRESSS:5000/all-openvpn.zip" style="float:right;"><i class="fa fa-download"></i> Download</a></li>
+
+</ul></div></div></div></div></body></html>
+mySiteOvpn
+
+sed -i "s|IP-ADDRESSS|${domain}|g" /var/www/html/index.html
+}
+
+cert_ovpn
+
+#firewall untuk memperbolehkan akses UDP dan akses jalur TCP
+iptables -t nat -I POSTROUTING -s 10.6.0.0/24 -o $ANU -j MASQUERADE
+iptables -t nat -I POSTROUTING -s 10.7.0.0/24 -o $ANU -j MASQUERADE
+iptables-save > /etc/iptables.up.rules
+chmod +x /etc/iptables.up.rules
+
+iptables-restore -t < /etc/iptables.up.rules
+netfilter-persistent save
+netfilter-persistent reload
+
+# Restart service openvpn
+systemctl enable openvpn
+systemctl start openvpn
+/etc/init.d/openvpn restart
+
+
+# Stunnel Install
+apt-get update
+apt-get install -y stunnel4 openssl
+
+# Create stunnel directory
+mkdir -p /etc/stunnel
+chmod 755 /etc/stunnel
+
+# Generate SSL Certificate
+echo "Generating SSL certificate..."
+country="MY"
+state="Indonesia"
+locality="Lampung_utara"
+organization="@XDTunnell"
+organizationalunit="@XDTunnell"
+commonname="XDTunnell"
+email="admin@xdproject.com"
+
+# Generate private key and certificate
+openssl genrsa -out /etc/stunnel/key.pem 2048
+openssl req -new -x509 -key /etc/stunnel/key.pem -out /etc/stunnel/cert.pem -days 1095 \
+    -subj "/C=$country/ST=$state/L=$locality/O=$organization/OU=$organizationalunit/CN=$commonname/emailAddress=$email"
+
+# Combine key and cert
+cat /etc/stunnel/key.pem /etc/stunnel/cert.pem > /etc/stunnel/stunnel.pem
+chmod 600 /etc/stunnel/stunnel.pem
+
+# Create stunnel configuration
+echo "Creating stunnel configuration..."
+cat > /etc/stunnel/stunnel.conf <<-END
+cert = /etc/stunnel/stunnel.pem
+key = /etc/stunnel/key.pem
+client = no
+pid = /var/run/stunnel4/stunnel4.pid
+setuid = stunnel4
+setgid = stunnel4
+
+socket = a:SO_REUSEADDR=1
+socket = l:TCP_NODELAY=1
+socket = r:TCP_NODELAY=1
+
+sslVersion = all
+options = NO_SSLv2
+options = NO_SSLv3
+ciphers = HIGH:!aNULL:!MD5:!RC4
+
+; Logging
+debug = 5
+output = /var/log/stunnel4/stunnel.log
+
+; OpenVPN SSL
+[openvpn]
+accept = 442
+connect = 127.0.0.1:1194
+END
+
+# Create log directory
+mkdir -p /var/log/stunnel4
+touch /var/log/stunnel4/stunnel.log
+chown -R stunnel4:stunnel4 /var/log/stunnel4
+
+# Enable stunnel service
+echo "Configuring stunnel service..."
+sed -i 's/ENABLED=0/ENABLED=1/' /etc/default/stunnel4
+
+# Start service
+systemctl restart stunnel4
+systemctl enable stunnel4
+
+# Check status
+echo "Checking stunnel status..."
+systemctl status stunnel4 --no-pager
+
+# Firewall configuration
+if command -v ufw &> /dev/null; then
+    echo "Configuring UFW firewall..."
+    ufw allow 442
+    ufw reload
+elif command -v iptables &> /dev/null; then
+    echo "Configuring iptables firewall..."
+    iptables -A INPUT -p tcp --dport 442 -j ACCEPT
+    iptables-save > /etc/iptables.up.rules
+fi
+
+# restart openvpn dan cek status openvpn
+systemctl enable --now openvpn-server@server-tcp-1194
+systemctl enable --now openvpn-server@server-udp-2200
+/etc/init.d/openvpn restart
+/etc/init.d/openvpn status
+
+# Delete script
+history -c
+rm -f $0

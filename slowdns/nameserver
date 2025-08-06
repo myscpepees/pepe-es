@@ -1,0 +1,71 @@
+#!/bin/sh
+REPOS="https://raw.githubusercontent.com/myscpepees/pepe-es/main/"
+ns_domain_cloudflare() {
+	DOMAIN="vip-server.web.id"
+	DOMAIN_PATH=$(cat /etc/xray/domain)
+	SUB=$(cat /etc/xray/domain | cut -d "." -f1)
+	SUB_DOMAIN=${SUB}."vip-server.web.id"
+	NS_DOMAIN=ns-${SUB_DOMAIN}
+	CF_ID=fadliwaykanan@gmail.com
+        CF_KEY=ce493b81967366a8b0bf15fc92a804c2101a7
+	set -euo pipefail
+	if [[ -f /root/.ipvps ]]; then
+	IP=$(cat /root/.ipvps)
+	elif [[ -f /root/.myip ]]; then
+	IP=$(cat /root/.myip)
+	else
+	IP=$(curl -s ipv4.icanhazip.com)
+	fi
+	echo "Updating DNS NS for ${NS_DOMAIN}..."
+	ZONE=$(
+		curl -sLX GET "https://api.cloudflare.com/client/v4/zones?name=${DOMAIN}&status=active" \
+		-H "X-Auth-Email: ${CF_ID}" \
+		-H "X-Auth-Key: ${CF_KEY}" \
+		-H "Content-Type: application/json" | jq -r .result[0].id
+	)
+
+	RECORD=$(
+		curl -sLX GET "https://api.cloudflare.com/client/v4/zones/${ZONE}/dns_records?name=${NS_DOMAIN}" \
+		-H "X-Auth-Email: ${CF_ID}" \
+		-H "X-Auth-Key: ${CF_KEY}" \
+		-H "Content-Type: application/json" | jq -r .result[0].id
+	)
+
+	if [[ "${#RECORD}" -le 10 ]]; then
+		RECORD=$(
+			curl -sLX POST "https://api.cloudflare.com/client/v4/zones/${ZONE}/dns_records" \
+			-H "X-Auth-Email: ${CF_ID}" \
+			-H "X-Auth-Key: ${CF_KEY}" \
+			-H "Content-Type: application/json" \
+			--data '{"type":"NS","name":"'${NS_DOMAIN}'","content":"'${DOMAIN_PATH}'","proxied":false}' | jq -r .result.id
+		)
+	fi
+
+	RESULT=$(
+		curl -sLX PUT "https://api.cloudflare.com/client/v4/zones/${ZONE}/dns_records/${RECORD}" \
+		-H "X-Auth-Email: ${CF_ID}" \
+		-H "X-Auth-Key: ${CF_KEY}" \
+		-H "Content-Type: application/json" \
+		--data '{"type":"NS","name":"'${NS_DOMAIN}'","content":"'${DOMAIN_PATH}'","proxied":false}'
+	)
+	echo $NS_DOMAIN >/etc/xray/dns
+}
+
+setup_dnstt() {
+	cd
+	mkdir -p /etc/slowdns
+	cd /etc/slowdns
+	wget -q -O dnstt-server "${REPOS}slowdns/dnstt-server"
+	chmod +x dnstt-server >/dev/null 2>&1
+	wget -q -O dnstt-client "${REPOS}slowdns/dnstt-client"
+	chmod +x dnstt-client >/dev/null 2>&1
+	./dnstt-server -gen-key -privkey-file server.key -pubkey-file server.pub
+	chmod +x *
+	wget -q -O /etc/systemd/system/client.service "${REPOS}slowdns/client.service"
+	wget -q -O /etc/systemd/system/server.service "${REPOS}slowdns/server.service"
+	sed -i "s/xxxx/$NS_DOMAIN/g" /etc/systemd/system/client.service 
+	sed -i "s/xxxx/$NS_DOMAIN/g" /etc/systemd/system/server.service 
+}
+ns_domain_cloudflare
+setup_dnstt
+rm -f "$0"
