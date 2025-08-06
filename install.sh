@@ -940,25 +940,25 @@ rm -rf $0
 clear
 #sudo hostnamectl set-hostname $username
 
-CHATID="-1002581802863"
-KEY="7711319043:AAFTyYqgRnNwfVwcB02_wVsaYi-hEvAqjp0"
-URL="https://api.telegram.org/bot$KEY/sendMessage"
-TEXT="
-<code>────────────────────</code>
-<b>☘️ AUTOSCRIPT PREMIUM ☘️</b>
-<code>────────────────────</code>
-<code>Client  :</code> <code>$username</code>
-<code>ISP     :</code> <code>$ISP</code>
-<code>Country :</code> <code>$CITY</code>
-<code>Time    :</code> <code>$(date)</code>
-<code>Expired :</code> <code>$exp</code>
-<code>────────────────────</code>
-Automatic Notifications From
-XDTunnel Bot
-"'&reply_markup={"inline_keyboard":[[{"text":" ᴏᴡɴᴇʀ ","url":"https://t.me/xdxl_real"}]]}' 
+##CHATID="-1002581802863"
+##KEY="7711319043:AAFTyYqgRnNwfVwcB02_wVsaYi-hEvAqjp0"
+##URL="https://api.telegram.org/bot$KEY/sendMessage"
+##TEXT="
+##<code>────────────────────</code>
+##<b>☘️ AUTOSCRIPT PREMIUM ☘️</b>
+##<code>────────────────────</code>
+##<code>Client  :</code> <code>$username</code>
+##<code>ISP     :</code> <code>$ISP</code>
+##<code>Country :</code> <code>$CITY</code>
+##<code>Time    :</code> <code>$(date)</code>
+##<code>Expired :</code> <code>$exp</code>
+##<code>────────────────────</code>
+##Automatic Notifications From
+##XDTunnel Bot
+##"'&reply_markup={"inline_keyboard":[[{"text":" ᴏᴡɴᴇʀ ","url":"https://t.me/xdxl_real"}]]}' 
     curl -s --max-time 10 -d "chat_id=$CHATID&disable_web_page_preview=1&text=$TEXT&parse_mode=html" $URL >/dev/null
 
-echo -e "${g}Script Successfull Installed ${NC}"
+##echo -e "${g}Script Successfull Installed ${NC}"
 echo ""
 sleep 3
 reboot
