@@ -1,0 +1,50 @@
+[Unit]
+Description=SSH & Server Management API Node.js
+Documentation=https://github.com/your-repo/ssh-api-nodejs
+After=network.target
+Wants=network.target
+
+[Service]
+Type=simple
+User=ssh-api
+Group=ssh-api
+WorkingDirectory=/opt/ssh-api-nodejs
+
+# Environment variables
+Environment=NODE_ENV=production
+Environment=PORT=3000
+Environment=DB_PATH=/opt/ssh-api-nodejs/database.db
+
+# Main process
+ExecStart=/usr/bin/node /opt/ssh-api-nodejs/app.js
+ExecReload=/bin/kill -HUP $MAINPID
+
+# Process management
+KillMode=mixed
+TimeoutStopSec=5
+Restart=on-failure
+RestartSec=10
+StartLimitInterval=60s
+StartLimitBurst=3
+
+# Security settings
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/opt/ssh-api-nodejs
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+
+# Resource limits
+LimitNOFILE=65536
+LimitNPROC=4096
+
+# Logging
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=ssh-api-nodejs
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,43 @@
+{
+  "name": "ssh-server-management-api",
+  "version": "1.0.0",
+  "description": "SSH & Server Management API using Node.js",
+  "main": "app.js",
+  "scripts": {
+    "start": "node app.js",
+    "dev": "nodemon app.js",
+    "test": "jest",
+    "install-deps": "npm install"
+  },
+  "keywords": [
+    "ssh",
+    "server",
+    "management",
+    "api",
+    "nodejs",
+    "express"
+  ],
+  "author": "SSH Management System",
+  "license": "MIT",
+  "dependencies": {
+    "express": "^4.18.2",
+    "sqlite3": "^5.1.6",
+    "bcrypt": "^5.1.1",
+    "jsonwebtoken": "^9.0.2",
+    "cors": "^2.8.5",
+    "helmet": "^7.0.0",
+    "express-rate-limit": "^6.10.0",
+    "dotenv": "^16.3.1",
+    "moment": "^2.29.4",
+    "axios": "^1.5.0",
+    "child_process": "^1.0.2"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.1",
+    "jest": "^29.7.0",
+    "supertest": "^6.3.3"
+  },
+  "engines": {
+    "node": ">=14.0.0"
+  }
+}

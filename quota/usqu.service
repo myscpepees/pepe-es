@@ -1,0 +1,14 @@
+[Unit]
+Description=Xray Quota Monitoring Service
+Documentation=https://t.me/xdtunnell
+After=network.target
+
+[Service]
+Type=simple
+User=root
+ExecStart=/usr/sbin/usqu
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target
