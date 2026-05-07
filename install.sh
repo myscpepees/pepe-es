@@ -146,7 +146,8 @@ apt autoremove -y >/dev/null 2>&1
 
 source /etc/os-release
 OS="$ID $VERSION_ID"
-if [[ "$OS" == "debian 12" || "$OS" == "ubuntu 24.04" || "$OS" == "ubuntu 24.10" || "$OS" == "ubuntu 25.10"]]; then
+
+if [[ "$OS" == "debian 12" || "$OS" == "ubuntu 24.04" || "$OS" == "ubuntu 24.10" || "$OS" == "ubuntu 25.10" ]]; then
     sudo apt update
     sudo apt install -y python3-venv python3-pip
     sudo python3 -m venv /opt/gdown-venv
@@ -157,7 +158,6 @@ else
 fi
 
 print_success "Packet Yang Dibutuhkan"
-}
 
 function pasang_domain() {
 clear
