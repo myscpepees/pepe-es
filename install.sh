@@ -158,6 +158,7 @@ else
 fi
 
 print_success "Packet Yang Dibutuhkan"
+}
 
 function pasang_domain() {
 clear
